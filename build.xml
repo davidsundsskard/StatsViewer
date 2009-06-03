@@ -1,14 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="StatsViewer" default="webapp" basedir=".">
 
-	<target name="webapp" depends="" description="Build the war file">
-		<war destfile="StatsViewer.war" webxml="WebContent/WEB-INF/web.xml">
-			<fileset dir="WebContent" />
-			<lib dir="WebContent/WEB-INF/lib">
-			</lib>
-			<classes dir="build/classes" />
-			<zipfileset dir="images" prefix="images" />
-		</war>
+	<property name="tomcat.local" value="../tomcat"/>
+        <property name="build"        value="build"/>
+        <property name="src"          value="src"/>
+        <property name="lib"          value="lib"/>
+
+        <target name="init">
+          <mkdir dir="${build}/classes"/>
+        </target>      
+
+        <target name="compile" depends="init" description="Compile the source">
+          <javac srcdir="${src}" destdir="${build}/classes">
+            <classpath>
+              <fileset dir="${lib}"/>
+            </classpath>
+          </javac>
+        </target>
+
+	<target name="webapp" depends="compile" description="Build the war file">
+	  <war destfile="StatsViewer.war" webxml="WebContent/WEB-INF/web.xml">
+	    <fileset dir="WebContent" />
+	    <lib dir="WebContent/WEB-INF/lib">
+	    </lib>
+	    <classes dir="build/classes" />
+	    <zipfileset dir="images" prefix="images" />
+	  </war>
 	</target>
 	
+        <target name="clean">
+          <delete dir="build"/>
+        </target>
+
+        <target name="deploy" depends="webapp">
+          <copy file="StatsViewer.war" todir="${tomcat.local}/webapps/"/>
+        </target>
 </project>
