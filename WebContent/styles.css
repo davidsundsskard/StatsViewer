@@ -1,0 +1,13 @@
+body { font-family: verdana, tahoma, arial, sans-serif; font-size : 10pt; }
+
+a:link {
+	color: 000066;
+}
+
+a:active {
+	color: 000066;
+}
+
+a:visited  {
+	color: 993300;
+}

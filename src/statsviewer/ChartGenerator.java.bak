@@ -1,0 +1,240 @@
+package statsviewer;
+
+import java.awt.Color;
+import java.awt.geom.Ellipse2D;
+import java.io.PrintWriter;
+import java.text.DateFormat;
+import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.http.HttpSession;
+
+import org.jfree.chart.ChartRenderingInfo;
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryAxis;
+import org.jfree.chart.axis.DateAxis;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.ValueAxis;
+import org.jfree.chart.entity.StandardEntityCollection;
+import org.jfree.chart.labels.StandardCategoryToolTipGenerator;
+import org.jfree.chart.labels.StandardXYToolTipGenerator;
+import org.jfree.chart.plot.CategoryPlot;
+import org.jfree.chart.plot.Plot;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.renderer.category.BarRenderer;
+import org.jfree.chart.renderer.xy.StandardXYItemRenderer;
+import org.jfree.chart.renderer.xy.XYAreaRenderer;
+import org.jfree.chart.servlet.ServletUtilities;
+import org.jfree.chart.urls.TimeSeriesURLGenerator;
+import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.data.xy.DefaultTableXYDataset;
+import org.jfree.data.xy.XYDataset;
+import org.jfree.data.xy.XYSeries;
+
+@SuppressWarnings("serial")
+public class ChartGenerator {
+
+	// 9 colors supported
+	private static List<Color> colors = new ArrayList<Color>() {
+		{
+			add(Color.blue);
+			add(Color.orange);
+			add(Color.green);
+			add(Color.red);
+			add(Color.cyan);
+			add(Color.pink);
+			add(Color.magenta);
+			add(Color.yellow);
+			add(Color.black);
+		}
+	};
+
+	private static SimpleDateFormat dateFormat = new SimpleDateFormat(
+			"dd-MM-yyyy HH:mm");
+
+	public static String generateBarChart(String containerName, Date date,
+			HttpSession session, PrintWriter pw) {
+		String filename = null;
+		try {
+			// Retrieve dataset
+			DataSet dataSet = new DataSet(containerName, false);
+			ArrayList<DataEntry> list = dataSet.getDataBySection(date);
+
+			// Throw a custom NoDataException if there is no data
+			if (list.size() == 0) {
+				throw new NoDataException("No data has been found");
+			}
+
+			// Create and populate a CategoryDataset
+			DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+			for (DataEntry dataEntry : list) {
+				dataset.addValue(new Long(dataEntry.getAmount()), "Category",
+						dataEntry.getCategory());
+			}
+
+			// Create the chart object
+			CategoryAxis categoryAxis = new CategoryAxis("");
+			ValueAxis valueAxis = new NumberAxis("");
+			BarRenderer renderer = new BarRenderer();
+			renderer
+					.setBaseToolTipGenerator(new StandardCategoryToolTipGenerator());
+
+			Plot plot = new CategoryPlot(dataset, categoryAxis, valueAxis,
+					renderer);
+			JFreeChart chart = new JFreeChart("",
+					JFreeChart.DEFAULT_TITLE_FONT, plot, false);
+			chart.setBackgroundPaint(java.awt.Color.white);
+
+			// Write the chart image to the temporary directory
+			ChartRenderingInfo info = new ChartRenderingInfo(
+					new StandardEntityCollection());
+			filename = ServletUtilities.saveChartAsPNG(chart, 500, 300, info,
+					session);
+
+			// Write the image map to the PrintWriter
+			ChartUtilities.writeImageMap(pw, filename, info, false);
+			pw.flush();
+
+		} catch (NoDataException e) {
+			System.out.println(e.getMessage());
+			filename = "public_nodata_500x300.png";
+		} catch (Exception e) {
+			System.out.println("Exception - " + e.toString());
+			e.printStackTrace(System.out);
+			filename = "public_error_500x300.png";
+		}
+		return filename;
+	}
+
+	public static String generateXYAreaChart(final String containerName,
+			int height, int width, String dayView, boolean clickable,
+			HttpSession session, PrintWriter pw) {
+		String filename = null;
+		try {
+			// Retrieve list of WebHits for each section and populate a
+			// TableXYDataset
+			DataSet dataSet = new DataSet(containerName, dayView != null
+					&& dayView.equals("on"));
+			ArrayList<String> categories = dataSet.getCategories();
+			DefaultTableXYDataset dataset = new DefaultTableXYDataset();
+			for (String section : categories) {
+				ArrayList<DataEntry> list = dataSet.getDataByDate(section);
+				XYSeries dataSeries = new XYSeries(section, true, false);
+
+				for (DataEntry dataEntry : list) {
+					dataSeries.addOrUpdate(dataEntry.getDate().getTime(),
+							dataEntry.getAmount());
+				}
+				dataset.addSeries(dataSeries);
+			}
+
+			// Throw a custom NoDataException if there is no data
+			if (dataset.getItemCount() == 0) {
+				throw new NoDataException("No data has been found");
+			}
+
+			// Create the X-Axis
+			DateAxis xAxis = new DateAxis(null);
+			xAxis.setLowerMargin(0.0);
+			xAxis.setUpperMargin(0.0);
+			
+			// Create the X-Axis
+			NumberAxis yAxis = new NumberAxis(null);
+			yAxis.setAutoRangeIncludesZero(true);
+			
+			// Create the renderer			
+			StandardXYItemRenderer renderer; 
+			if(clickable) {
+				// Create tooltip and URL generators
+				StandardXYToolTipGenerator ttg = new StandardXYToolTipGenerator(
+						StandardXYToolTipGenerator.DEFAULT_TOOL_TIP_FORMAT,
+						dateFormat, NumberFormat.getInstance());
+				TimeSeriesURLGenerator urlg = new CustomTimeSeriesURLGenerator(
+						dateFormat, "barchart.jsp", "category", "date",
+						new HashMap<String, String>() {
+							{
+								put("container", containerName);
+							}
+						});
+
+				renderer = new StandardXYItemRenderer(
+						XYAreaRenderer.SHAPES_AND_LINES, ttg, urlg);
+
+				for (int i = 0; i < categories.size(); i++) {
+					renderer.setSeriesPaint(i, colors.get(i));
+					renderer.setSeriesShape(i, new Ellipse2D.Double(-3, -3, 6, 6));
+				}
+			} else {
+				renderer = new StandardXYItemRenderer(
+						XYAreaRenderer.SHAPES_AND_LINES);
+				for (int i = 0; i < categories.size(); i++) {
+					renderer.setSeriesPaint(i, colors.get(i));
+					renderer.setSeriesShape(i, new Ellipse2D.Double());
+				}
+			}
+
+			// Create the plot
+			XYPlot plot = new XYPlot(dataset, xAxis, yAxis, renderer);
+			plot.setForegroundAlpha(0.65f);
+
+			// Reconfigure Y-Axis so the auto-range knows that the data is
+			// stacked
+			yAxis.configure();
+
+			// Create the chart
+			JFreeChart chart = new JFreeChart(null,
+					JFreeChart.DEFAULT_TITLE_FONT, plot, true);
+			chart.setBackgroundPaint(java.awt.Color.white);
+
+			// Write the chart image to the temporary directory
+			ChartRenderingInfo info = new ChartRenderingInfo(
+					new StandardEntityCollection());
+			filename = ServletUtilities.saveChartAsPNG(chart, width, height,
+					info, session);
+
+			// Write the image map to the PrintWriter
+			ChartUtilities.writeImageMap(pw, filename, info, false);
+			pw.flush();
+
+		} catch (NoDataException e) {
+			System.out.println(e.getMessage());
+			filename = "public_nodata_500x300.png";
+		} catch (Exception e) {
+			System.out.println("Exception - " + e.toString());
+			e.printStackTrace(System.out);
+			filename = "public_error_500x300.png";
+		}
+		return filename;
+	}
+
+	private static class CustomTimeSeriesURLGenerator extends
+			TimeSeriesURLGenerator {
+		private final Map<String, String> extraParams;
+
+		public CustomTimeSeriesURLGenerator(DateFormat dateFormat,
+				String prefix, String seriesParamName, String itemParamName,
+				Map<String, String> extraParams) {
+			super(dateFormat, prefix, seriesParamName, itemParamName);
+			this.extraParams = extraParams;
+		}
+
+		@Override
+		public String generateURL(XYDataset dataset, int series, int item) {
+			String url = super.generateURL(dataset, series, item);
+			for (String paramName : extraParams.keySet()) {
+				url += "&" + paramName + "=" + extraParams.get(paramName);
+			}
+			return url;
+		}
+	}
+
+	public static void main(java.lang.String[] args) {
+	}
+
+}

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="StatsViewer" default="webapp" basedir=".">
+
+	<target name="webapp" depends="" description="Build the war file">
+		<war destfile="StatsViewer.war" webxml="WebContent/WEB-INF/web.xml">
+			<fileset dir="WebContent" />
+			<lib dir="WebContent/WEB-INF/lib">
+			</lib>
+			<classes dir="build/classes" />
+			<zipfileset dir="images" prefix="images" />
+		</war>
+	</target>
+	
+</project>
