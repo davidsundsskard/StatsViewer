@@ -10,18 +10,18 @@ public class ColorGenerator {
 
         List<Color> colors = new ArrayList();
 
-        Integer RGBInterval = getRGBInterval(count);
+        Integer RGBInterval = getInterval(count);
         Integer currentColor = 0;
         for(int i=0;i<count;i++) {
             currentColor += RGBInterval;
-            colors.add(new Color(currentColor,currentColor,currentColor));
+            colors.add(new Color(currentColor));
         }
         return colors;
     }
 
-    private static Integer getRGBInterval(Integer count) {
-        
-        Integer interval = 255 / count;
+    private static Integer getInterval(Integer count) {
+
+        Integer interval = java.lang.Integer.MAX_VALUE / count;
         return interval;
     }
 }
