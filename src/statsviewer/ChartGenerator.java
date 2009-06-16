@@ -40,21 +40,6 @@ import org.jfree.data.xy.XYSeries;
 @SuppressWarnings("serial")
 public class ChartGenerator {
 
-	// 9 colors supported
-	private static List<Color> colors = new ArrayList<Color>() {
-		{
-			add(Color.blue);
-			add(Color.orange);
-			add(Color.green);
-			add(Color.red);
-			add(Color.cyan);
-			add(Color.pink);
-			add(Color.magenta);
-			add(Color.yellow);
-			add(Color.black);
-		}
-	};
-
 	private static SimpleDateFormat dateFormat = new SimpleDateFormat(
 			"dd-MM-yyyy HH:mm");
 
@@ -150,7 +135,10 @@ public class ChartGenerator {
 			
 			// Create the renderer			
 			StandardXYItemRenderer renderer; 
-			if(clickable) {
+                        
+                        // Get list of colors
+                        List<Color> colors = ColorGenerator.getColors(categories.size());
+                        if(clickable) {
 				// Create tooltip and URL generators
 				StandardXYToolTipGenerator ttg = new StandardXYToolTipGenerator(
 						StandardXYToolTipGenerator.DEFAULT_TOOL_TIP_FORMAT,
@@ -165,7 +153,6 @@ public class ChartGenerator {
 
 				renderer = new StandardXYItemRenderer(
 						XYAreaRenderer.SHAPES_AND_LINES, ttg, urlg);
-
 				for (int i = 0; i < categories.size(); i++) {
 					renderer.setSeriesPaint(i, colors.get(i));
 					renderer.setSeriesShape(i, new Ellipse2D.Double(-3, -3, 6, 6));
